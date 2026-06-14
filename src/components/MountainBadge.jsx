@@ -204,6 +204,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 20,
     paddingBottom: 8,
+    marginRight: 4,
   },
   pressableArea: {
     alignItems: 'center',

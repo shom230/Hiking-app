@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Dimensions, Image, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Dimensions, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { BORDER_RADIUS, SHADOWS } from '../styles/theme';
 
@@ -47,9 +47,16 @@ const REGION_ASSETS = {
   }
 };
 
-export default function KoreaMap({ onSelectRegion, getRegionStats, completedRegions = [] }) {
-  const [activeRegion, setActiveRegion] = useState(null);
+const RegionImage = React.memo(({
+  source,
+  style
+}) => (
+  <View style={styles.puzzlePieceWrapper}>
+    <Image source={source} style={style} resizeMode="contain" />
+  </View>
+));
 
+export default function KoreaMap({ getRegionStats, completedRegions = [] }) {
   // Mappings of the 9 macro regions to their SVG polygonal path coordinates
   // Hand-calibrated to align perfectly with the assets outlines in a 340x460 ViewBox
   const REGION_PATHS = [
@@ -91,58 +98,96 @@ export default function KoreaMap({ onSelectRegion, getRegionStats, completedRegi
     },
   ];
 
-  const handleRegionPress = (regionId) => {
-    setActiveRegion(regionId);
-    setTimeout(() => {
-      setActiveRegion(null);
-      onSelectRegion(regionId);
-    }, 120); // Responsive feedback delay
-  };
+  const gyeonggiCompleted = completedRegions.includes('경기');
+  const gangwonCompleted = completedRegions.includes('강원');
+  const chungbukCompleted = completedRegions.includes('충북');
+  const chungnamCompleted = completedRegions.includes('충남');
+  const jeonbukCompleted = completedRegions.includes('전북');
+  const jeonnamCompleted = completedRegions.includes('전남');
+  const gyeongbukCompleted = completedRegions.includes('경북');
+  const gyeongnamCompleted = completedRegions.includes('경남');
+  const jejuCompleted = completedRegions.includes('제주');
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.mapContainer}>
-          {/* Stacking 9 absolute image layers to build South Korea's puzzle map seamlessly */}
-          {REGION_PATHS.map((region) => {
-            const isCompleted = completedRegions.includes(region.id);
-            const imageSource = isCompleted 
-              ? REGION_ASSETS[region.id].color 
-              : REGION_ASSETS[region.id].gray;
+          <RegionImage
+            source={gyeonggiCompleted
+              ? require('../../assets/gyeonggi_color.png')
+              : require('../../assets/gyeonggi_gray.png')}
+            style={styles.gyeonggiImage}
+          />
 
-            return (
-              <TouchableOpacity 
-                key={region.id} 
-                style={styles.puzzlePieceWrapper}
-                onPress={() => handleRegionPress(region.id)}
-                activeOpacity={0.9}
-              >
-                <Image 
-                  source={imageSource}
-                  style={styles.puzzlePiece}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            );
-          })}
+          <RegionImage
+            source={gangwonCompleted
+              ? require('../../assets/gangwon_color.png')
+              : require('../../assets/gangwon_gray.png')}
+            style={styles.gangwonImage}
+          />
+
+          <RegionImage
+            source={chungbukCompleted
+              ? require('../../assets/chungbuk_color.png')
+              : require('../../assets/chungbuk_gray.png')}
+            style={styles.chungbukImage}
+          />
+
+          <RegionImage
+            source={chungnamCompleted
+              ? require('../../assets/chungnam_color.png')
+              : require('../../assets/chungnam_gray.png')}
+            style={styles.chungnamImage}
+          />
+
+          <RegionImage
+            source={jeonbukCompleted
+              ? require('../../assets/jeonbuk_color.png')
+              : require('../../assets/jeonbuk_gray.png')}
+            style={styles.jeonbukImage}
+          />
+
+          <RegionImage
+            source={jeonnamCompleted
+              ? require('../../assets/jeonnam_color.png')
+              : require('../../assets/jeonnam_gray.png')}
+            style={styles.jeonnamImage}
+          />
+
+          <RegionImage
+            source={gyeongbukCompleted
+              ? require('../../assets/gyeongbuk_color.png')
+              : require('../../assets/gyeongbuk_gray.png')}
+            style={styles.gyeongbukImage}
+          />
+
+          <RegionImage
+            source={gyeongnamCompleted
+              ? require('../../assets/gyeongnam_color.png')
+              : require('../../assets/gyeongnam_gray.png')}
+            style={styles.gyeongnamImage}
+          />
+
+          <RegionImage
+            source={jejuCompleted
+              ? require('../../assets/jeju_color.png')
+              : require('../../assets/jeju_gray.png')}
+            style={styles.jejuImage}
+          />
           
-          {/* Svg Touch Overlay Layer (COMPLETELY CLEAN - No text overlays) */}
+          {/* Svg Overlay Layer */}
           <Svg
             style={styles.svgOverlay}
             viewBox="0 0 340 460"
-            pointerEvents="none" // Forward touch down to puzzlePieceWrapper TouchableOpacity directly
+            pointerEvents="none"
           >
-            {REGION_PATHS.map((region) => {
-              const isPressed = activeRegion === region.id;
-
-              return (
-                <Path
-                  key={region.id}
-                  d={region.d}
-                  fill={isPressed ? 'rgba(222, 10, 38, 0.18)' : 'rgba(0,0,0,0.01)'}
-                />
-              );
-            })}
+            {REGION_PATHS.map((region) => (
+              <Path
+                key={region.id}
+                d={region.d}
+                fill="rgba(0,0,0,0.01)"
+              />
+            ))}
           </Svg>
         </View>
       </View>
@@ -185,6 +230,69 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   puzzlePiece: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  gyeonggiImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  gangwonImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  chungbukImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  chungnamImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  jeonbukImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  jeonnamImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  gyeongbukImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  gyeongnamImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  jejuImage: {
     position: 'absolute',
     top: 0,
     left: 0,

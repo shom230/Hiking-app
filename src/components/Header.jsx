@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, BORDER_RADIUS, TYPOGRAPHY } from '../styles/theme';
 
@@ -22,9 +22,10 @@ export default function Header({
   regionStats,
   currentPage, // 0 for Map, 1 for Region Cards list
   onPressProfile,
-  hidePagerDots
+  hidePagerDots,
+  profileImage
 }) {
-  const isHomeScreen = currentScreen === 'map' || currentScreen === 'challenges';
+  const isHomeScreen = currentScreen === 'map' || currentScreen === 'challenges' || currentScreen === 'ranking';
 
   return (
     <View style={styles.headerContainer}>
@@ -32,13 +33,15 @@ export default function Header({
         <View style={styles.homeHeaderRow}>
           <Text style={styles.appTitle}>등산도감</Text>
           
-          {currentScreen !== 'challenges' && !hidePagerDots ? (
+          {currentScreen !== 'challenges' && currentScreen !== 'ranking' && !hidePagerDots ? (
             <View style={styles.pagerDotsContainer}>
               <View style={[styles.pagerDot, currentPage === 0 ? styles.pagerDotActive : styles.pagerDotInactive]} />
               <View style={[styles.pagerDot, currentPage === 1 ? styles.pagerDotActive : styles.pagerDotInactive]} />
             </View>
           ) : currentScreen === 'challenges' ? (
             <Text style={styles.challengeTabSubtitle}>테마 챌린지</Text>
+          ) : currentScreen === 'ranking' ? (
+            <Text style={styles.challengeTabSubtitle}>실시간 랭킹</Text>
           ) : null}
           
           <TouchableOpacity 
@@ -46,7 +49,11 @@ export default function Header({
             onPress={onPressProfile}
           >
             <View style={styles.profileCircle}>
-              <Ionicons name="person" size={16} color="#64748B" />
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              ) : (
+                <Ionicons name="person" size={16} color="#64748B" />
+              )}
             </View>
           </TouchableOpacity>
         </View>
@@ -134,6 +141,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E1', // Grey avatar background
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 15,
   },
   regionHeaderContainer: {
     width: '100%',

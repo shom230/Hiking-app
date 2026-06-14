@@ -16,6 +16,9 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
+import { db } from './src/utils/firebase';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import NicknameModal from './src/components/NicknameModal';
 
 // Prevent splash screen from auto-hiding immediately
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -42,6 +45,7 @@ import ChallengeTab from './src/components/ChallengeTab';
 import AcquisitionOverlay from './src/components/AcquisitionOverlay';
 import RegionConquestOverlay from './src/components/RegionConquestOverlay';
 import ProfileModal from './src/components/ProfileModal';
+import RankingTab from './src/components/RankingTab';
 
 // Challenge Evaluation utilities
 import { evaluateAllChallenges, evaluateBaseTitle, CHALLENGE_DEFINITIONS } from './src/utils/ChallengeEvaluator';
@@ -98,6 +102,9 @@ export default function App() {
   const [currentTitle, setCurrentTitle] = useState('🌱 등산 새내기');
   const [earnedTitles, setEarnedTitles] = useState(['🌱 등산 새내기']);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [userNickname, setUserNickname] = useState(null);
+  const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
 
   const [regionCelebVisible, setRegionCelebVisible] = useState(false);
   const [regionCelebName, setRegionCelebName] = useState(null);
@@ -176,6 +183,63 @@ export default function App() {
     }
   };
 
+  const handleUpdateProfileImage = async (uri) => {
+    try {
+      setProfileImage(uri);
+      if (uri) {
+        await AsyncStorage.setItem('profileImage', uri);
+      } else {
+        await AsyncStorage.removeItem('profileImage');
+      }
+    } catch (e) {
+      console.error('Failed to update profile image', e);
+    }
+  };
+
+  const syncRankingData = async (nickname, updatedAchievements) => {
+    if (!nickname) return;
+    try {
+      const badgeCount = Object.keys(updatedAchievements).length;
+      const totalHeight = Object.keys(updatedAchievements).reduce((sum, id) => {
+        const mountain = MOUNTAINS_DATA.find(m => m.id === id);
+        return sum + (mountain ? mountain.height : 0);
+      }, 0);
+
+      await setDoc(doc(db, 'rankings', nickname), {
+        nickname: nickname,
+        badgeCount: badgeCount,
+        totalHeight: totalHeight,
+        updatedAt: new Date().toISOString()
+      });
+      console.log('Successfully synchronized rankings database for:', nickname);
+    } catch (e) {
+      console.error('Failed to update rankings in Firestore:', e);
+    }
+  };
+
+  const handleUpdateNickname = async (newNickname) => {
+    try {
+      const oldNickname = userNickname;
+      setUserNickname(newNickname);
+      await AsyncStorage.setItem('userNickname', newNickname);
+
+      // If there's an old nickname and it's different, delete it from Firestore
+      if (oldNickname && oldNickname !== newNickname) {
+        try {
+          await deleteDoc(doc(db, 'rankings', oldNickname));
+          console.log('Successfully deleted old rankings record:', oldNickname);
+        } catch (err) {
+          console.error('Failed to delete old nickname record from Firestore:', err);
+        }
+      }
+
+      // Sync the new nickname stats
+      await syncRankingData(newNickname, achievements);
+    } catch (e) {
+      console.error('Failed to update nickname:', e);
+    }
+  };
+
   // Check Region Complete Async validator
   const checkRegionComplete = async (regionName) => {
     const subRegions = MAP_REGION_GROUPS[regionName] || [regionName];
@@ -225,6 +289,20 @@ export default function App() {
         const storedShown = await AsyncStorage.getItem('shownRegionComplete');
         if (storedShown) {
           setShownRegions(JSON.parse(storedShown));
+        }
+
+        // 'profileImage' 로드
+        const storedProfileImage = await AsyncStorage.getItem('profileImage');
+        if (storedProfileImage) {
+          setProfileImage(storedProfileImage);
+        }
+
+        // 'userNickname' 로드
+        const storedNickname = await AsyncStorage.getItem('userNickname');
+        if (storedNickname) {
+          setUserNickname(storedNickname);
+        } else {
+          setNicknameModalVisible(true);
         }
 
         // 각 9개 지역에 대하여 checkRegionComplete 검증하여 completedRegions 상태 업데이트
@@ -355,6 +433,9 @@ export default function App() {
           }
         }
       }
+
+      // Sync Firestore Rankings
+      await syncRankingData(userNickname, updated);
     } catch (e) {
       console.error('Failed to save achievement', e);
     }
@@ -396,6 +477,9 @@ export default function App() {
           }
         }
       }
+
+      // Sync Firestore Rankings
+      await syncRankingData(userNickname, updated);
     } catch (e) {
       console.error('Failed to delete achievement', e);
     }
@@ -612,13 +696,14 @@ export default function App() {
           
              {/* Dynamic Header */}
              <Header
-               currentScreen={isLargeScreen ? 'map' : (activeTab === 'challenges' ? 'challenges' : currentScreen)}
+               currentScreen={isLargeScreen ? 'map' : (activeTab === 'challenges' ? 'challenges' : (activeTab === 'ranking' ? 'ranking' : currentScreen))}
                selectedRegion={selectedRegion}
                onBack={handleBackToRegionList}
                regionStats={activeRegionStats}
                currentPage={currentPage}
                onPressProfile={() => setProfileModalVisible(true)}
                hidePagerDots={isLargeScreen}
+               profileImage={profileImage}
              />
  
              {/* Screen Views */}
@@ -626,6 +711,13 @@ export default function App() {
                {activeTab === 'challenges' ? (
                  // ================= SCREEN CHALLENGES =================
                  <ChallengeTab achievements={achievements} />
+               ) : activeTab === 'ranking' ? (
+                 // ================= SCREEN RANKING =================
+                 <RankingTab 
+                   userNickname={userNickname} 
+                   totalBadges={globalStats.completed} 
+                   totalHeight={cumulativeHeight} 
+                 />
                ) : isLargeScreen ? (
                  // ================= RESPONSIVE SIDE-BY-SIDE LAYOUT FOR WEB =================
                  <View style={styles.webRowLayout}>
@@ -757,7 +849,7 @@ export default function App() {
                           initialNumToRender={9}
                           showsVerticalScrollIndicator={false}
                           columnWrapperStyle={{
-                            justifyContent: 'space-between',
+                            justifyContent: 'flex-start',
                             paddingHorizontal: 4,
                             marginBottom: 4,
                           }}
@@ -883,7 +975,7 @@ export default function App() {
                     initialNumToRender={9}
                     showsVerticalScrollIndicator={false}
                     columnWrapperStyle={{
-                      justifyContent: 'space-between',
+                      justifyContent: 'flex-start',
                       paddingHorizontal: 4,
                       marginBottom: 4,
                     }}
@@ -947,12 +1039,27 @@ export default function App() {
                 activeOpacity={0.7}
               >
                 <Ionicons 
-                  name={activeTab === 'challenges' ? "trophy" : "trophy-outline"} 
+                  name={activeTab === 'challenges' ? "ribbon" : "ribbon-outline"} 
                   size={22} 
                   color={activeTab === 'challenges' ? '#2E7D32' : '#64748B'} 
                 />
                 <Text style={[styles.tabButtonText, activeTab === 'challenges' && styles.tabButtonTextActive]}>
                   챌린지
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.tabButton, activeTab === 'ranking' && styles.tabButtonActive]}
+                onPress={() => setActiveTab('ranking')}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name={activeTab === 'ranking' ? "trophy" : "trophy-outline"} 
+                  size={22} 
+                  color={activeTab === 'ranking' ? '#2E7D32' : '#64748B'} 
+                />
+                <Text style={[styles.tabButtonText, activeTab === 'ranking' && styles.tabButtonTextActive]}>
+                  랭킹
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1007,6 +1114,19 @@ export default function App() {
               totalBadges={globalStats.completed}
               totalHeight={cumulativeHeight}
               onEquipTitle={handleEquipTitle}
+              profileImage={profileImage}
+              onUpdateProfileImage={handleUpdateProfileImage}
+              userNickname={userNickname}
+              onUpdateNickname={handleUpdateNickname}
+            />
+
+            {/* Onboarding Nickname Modal */}
+            <NicknameModal
+              visible={nicknameModalVisible}
+              onSave={(nickname) => {
+                setNicknameModalVisible(false);
+                handleUpdateNickname(nickname);
+              }}
             />
           </View>
         )}

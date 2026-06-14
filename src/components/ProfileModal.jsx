@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -8,13 +8,39 @@ import {
   TouchableOpacity, 
   TouchableWithoutFeedback,
   Dimensions,
-  Platform
+  Platform,
+  Image,
+  TextInput
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS, BORDER_RADIUS, SHADOWS, TYPOGRAPHY } from '../styles/theme';
 import { CHALLENGE_DEFINITIONS, BASE_TITLE_DEFINITIONS } from '../utils/ChallengeEvaluator';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const titleHints = {
+  '서울 근교의 지배자': '수도권 정복 챌린지',
+  '설악의 후예': '강원 설산 정복 챌린지',
+  '남도 유랑객': '남도 탐험가 챌린지',
+  '영남 호걸': '영남 정복자 챌린지',
+  '한라의 전설': '제주 완등 챌린지',
+  '구름 위의 등산가': '하늘 아래 첫 동네 챌린지',
+  '하늘을 걷는 자': '구름 위의 산책 챌린지',
+  '등산 입문자': '초보 탈출 챌린지',
+  '산을 아는 자': '중급자의 길 챌린지',
+  '산의 고수': '고수의 여정 챌린지',
+  '봄바람 등산가': '봄의 등산가 챌린지',
+  '여름 산악인': '여름 산악인 챌린지',
+  '단풍 사냥꾼': '가을 단풍 사냥꾼 챌린지',
+  '설산의 전사': '겨울 설산 정복자 챌린지',
+  '새벽을 여는 자': '새벽 등산가 챌린지',
+  '주말 산악왕': '주말 등산왕 챌린지',
+  '산의 수호자': '꾸준한 등산가 챌린지',
+  '전국 유랑객': '전국 일주 챌린지',
+  '명산 정복자': '명산 30 완등 챌린지',
+  '대한민국 산의 왕': '전설의 등산가 챌린지',
+};
 
 export default function ProfileModal({
   visible,
@@ -23,8 +49,39 @@ export default function ProfileModal({
   earnedTitles,
   totalBadges,
   totalHeight,
-  onEquipTitle
+  onEquipTitle,
+  profileImage,
+  onUpdateProfileImage,
+  userNickname,
+  onUpdateNickname
 }) {
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [tempNickname, setTempNickname] = useState(userNickname || '');
+
+  useEffect(() => {
+    if (visible) {
+      setTempNickname(userNickname || '');
+      setIsEditingNickname(false);
+    }
+  }, [userNickname, visible]);
+
+  const handleSaveNickname = () => {
+    const trimmed = tempNickname.trim();
+    if (!trimmed) {
+      alert('닉네임을 입력해 주세요.');
+      return;
+    }
+    if (trimmed.length < 2) {
+      alert('닉네임은 최소 2글자 이상이어야 합니다.');
+      return;
+    }
+    if (trimmed.length > 15) {
+      alert('닉네임은 최대 15글자까지 가능합니다.');
+      return;
+    }
+    onUpdateNickname(trimmed);
+    setIsEditingNickname(false);
+  };
   // Combine base and themed titles for rendering (total 24 titles)
   const allTitles = [
     ...BASE_TITLE_DEFINITIONS.map(t => ({ ...t, isBase: true })),
@@ -36,6 +93,31 @@ export default function ProfileModal({
   // Comma helper
   const formatHeight = (height) => {
     return height.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + 'm';
+  };
+
+  const pickProfileImage = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          alert('사진첩 접근 권한이 필요합니다.');
+          return;
+        }
+      }
+      
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        onUpdateProfileImage(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.error('Error picking image', e);
+    }
   };
 
   return (
@@ -66,12 +148,54 @@ export default function ProfileModal({
               {/* Profile Card */}
               <View style={[styles.profileCard, SHADOWS.medium]}>
                 <View style={styles.avatarRow}>
-                  <View style={styles.avatarOutline}>
-                    <View style={styles.avatarInner}>
-                      <Ionicons name="person" size={44} color="#FFFFFF" />
+                  <TouchableOpacity 
+                    style={styles.avatarPickerContainer} 
+                    onPress={pickProfileImage}
+                  >
+                    <View style={styles.avatarOutline}>
+                      <View style={styles.avatarInner}>
+                        {profileImage ? (
+                          <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                        ) : (
+                          <Ionicons name="person" size={44} color="#FFFFFF" />
+                        )}
+                      </View>
                     </View>
-                  </View>
+                    <Text style={styles.avatarPickerText}>사진 변경</Text>
+                  </TouchableOpacity>
                   <View style={styles.avatarRightInfo}>
+                    {isEditingNickname ? (
+                      <View style={styles.nicknameEditContainer}>
+                        <TextInput
+                          style={styles.nicknameInput}
+                          value={tempNickname}
+                          onChangeText={setTempNickname}
+                          placeholder="닉네임 입력"
+                          maxLength={15}
+                          autoFocus
+                          placeholderTextColor="#94A3B8"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          returnKeyType="done"
+                          onSubmitEditing={handleSaveNickname}
+                        />
+                        <View style={styles.nicknameEditActionRow}>
+                          <TouchableOpacity onPress={handleSaveNickname} style={styles.saveNicknameBtn} activeOpacity={0.7}>
+                            <Ionicons name="checkmark-sharp" size={14} color="#FFFFFF" />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => setIsEditingNickname(false)} style={styles.cancelNicknameBtn} activeOpacity={0.7}>
+                            <Ionicons name="close-sharp" size={14} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.nicknameRow}>
+                        <Text style={styles.nicknameValue} numberOfLines={1}>{userNickname || '닉네임 없음'}</Text>
+                        <TouchableOpacity onPress={() => setIsEditingNickname(true)} style={styles.editNicknameBtn} activeOpacity={0.7}>
+                          <Ionicons name="pencil" size={12} color="#64748B" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     <Text style={styles.activeTitleLabel}>장착 중인 칭호</Text>
                     <Text style={styles.activeTitleValue}>{currentTitle || '🌱 등산 새내기'}</Text>
                   </View>
@@ -174,8 +298,10 @@ export default function ProfileModal({
 
                       {!isUnlocked && (
                         <View style={styles.lockedHintBox}>
-                          <Ionicons name="information-circle-outline" size={12} color="#94A3B8" style={{ marginRight: 4 }} />
-                          <Text style={styles.lockedHintText}>달성 챌린지 정보가 아직 가려져 있습니다.</Text>
+                          <Ionicons name="information-circle-outline" size={12} color="#9E9E9E" style={{ marginRight: 4 }} />
+                          <Text style={styles.lockedHintText}>
+                            획득 조건: {titleHints[titleName] || '해당 챌린지'} 달성 시 획득
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -254,6 +380,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  avatarPickerContainer: {
+    alignItems: 'center',
+  },
   avatarOutline: {
     width: 68,
     height: 68,
@@ -271,6 +400,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#64748B',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 30,
+  },
+  avatarPickerText: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    marginTop: 4,
   },
   avatarRightInfo: {
     marginLeft: 16,
@@ -427,7 +567,56 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   lockedHintText: {
-    fontSize: 10,
-    color: '#94A3B8',
+    fontSize: 11,
+    color: '#9E9E9E',
+    marginTop: 4,
+  },
+  nicknameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  nicknameValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1E293B',
+    marginRight: 6,
+    maxWidth: '80%',
+  },
+  editNicknameBtn: {
+    padding: 3,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+  },
+  nicknameEditContainer: {
+    marginBottom: 6,
+    width: '100%',
+  },
+  nicknameInput: {
+    borderWidth: 1,
+    borderColor: '#2E7D32',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    fontSize: 14,
+    color: '#1E293B',
+    backgroundColor: '#F8FAFC',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  nicknameEditActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  saveNicknameBtn: {
+    backgroundColor: '#2E7D32',
+    borderRadius: 4,
+    padding: 4,
+    marginRight: 6,
+  },
+  cancelNicknameBtn: {
+    backgroundColor: '#64748B',
+    borderRadius: 4,
+    padding: 4,
   },
 });
