@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -16,6 +16,15 @@ import { COLORS, BORDER_RADIUS, SHADOWS, TYPOGRAPHY } from '../styles/theme';
 
 export default function NicknameModal({ visible, onSave }) {
   const [nickname, setNickname] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (visible) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 300);
+    }
+  }, [visible]);
 
   const handleSubmit = () => {
     const trimmed = nickname.trim();
@@ -39,6 +48,7 @@ export default function NicknameModal({ visible, onSave }) {
       animationType="fade"
       transparent={true}
       visible={visible}
+      statusBarTranslucent={true}
       onRequestClose={() => {}} // Block dismissal on Android back button
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -59,16 +69,19 @@ export default function NicknameModal({ visible, onSave }) {
 
               <View style={styles.inputContainer}>
                 <TextInput
+                  ref={inputRef}
                   style={styles.input}
                   placeholder="사용할 닉네임 입력 (2~15자)"
                   placeholderTextColor="#94A3B8"
                   value={nickname}
                   onChangeText={setNickname}
                   maxLength={15}
+                  autoFocus={true}
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
                   onSubmitEditing={handleSubmit}
+                  onClick={() => Platform.OS === 'web' && inputRef.current?.focus()}
                 />
               </View>
 
@@ -89,11 +102,16 @@ export default function NicknameModal({ visible, onSave }) {
 
 const styles = StyleSheet.create({
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 26, 20, 0.7)', // Premium semi-transparent dark green tint
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(15, 26, 20, 0.7)', // Premium semi-transparent dark green tint
+    pointerEvents: 'auto',
   },
   keyboardContainer: {
     width: '100%',
@@ -138,17 +156,20 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   input: {
-    width: '100%',
-    height: 52,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
     paddingHorizontal: 16,
-    fontSize: 15,
-    color: '#1E293B',
-    backgroundColor: '#F8FAFC',
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: '#F5F5F5',
+    width: '100%',
+    zIndex: 9999,
+    pointerEvents: 'auto',
     textAlign: 'center',
     fontWeight: '600',
+    color: '#1E293B',
+    height: 52,
   },
   submitButton: {
     width: '100%',
