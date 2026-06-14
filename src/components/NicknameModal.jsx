@@ -18,11 +18,17 @@ export default function NicknameModal({ visible, onSave }) {
   const [nickname, setNickname] = useState('');
   const inputRef = useRef(null);
 
+  const handleModalShow = () => {
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+  };
+
   useEffect(() => {
     if (visible) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 300);
+      handleModalShow();
     }
   }, [visible]);
 
@@ -43,6 +49,10 @@ export default function NicknameModal({ visible, onSave }) {
     onSave(trimmed);
   };
 
+  const handleInputPress = () => {
+    inputRef.current?.focus();
+  };
+
   return (
     <Modal
       animationType="fade"
@@ -51,7 +61,7 @@ export default function NicknameModal({ visible, onSave }) {
       statusBarTranslucent={true}
       onRequestClose={() => {}} // Block dismissal on Android back button
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <TouchableWithoutFeedback onPress={() => {}}>
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -68,21 +78,28 @@ export default function NicknameModal({ visible, onSave }) {
               </Text>
 
               <View style={styles.inputContainer}>
-                <TextInput
-                  ref={inputRef}
-                  style={styles.input}
-                  placeholder="사용할 닉네임 입력 (2~15자)"
-                  placeholderTextColor="#94A3B8"
-                  value={nickname}
-                  onChangeText={setNickname}
-                  maxLength={15}
-                  autoFocus={true}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubmit}
-                  onClick={() => Platform.OS === 'web' && inputRef.current?.focus()}
-                />
+                <TouchableOpacity
+                  onPress={handleInputPress}
+                  activeOpacity={1}
+                  style={{ width: '100%' }}
+                >
+                  <TextInput
+                    ref={inputRef}
+                    style={styles.input}
+                    placeholder="사용할 닉네임 입력 (2~15자)"
+                    placeholderTextColor="#94A3B8"
+                    value={nickname}
+                    onChangeText={setNickname}
+                    maxLength={15}
+                    autoCapitalize="none"
+                    autoFocus={false}
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSubmit}
+                    onPressIn={() => inputRef.current?.focus()}
+                    onClick={() => Platform.OS === 'web' && inputRef.current?.focus()}
+                  />
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity 
